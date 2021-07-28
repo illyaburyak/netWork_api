@@ -1,0 +1,52 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: test
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 5s
+      retries: 5
+    restart: always
+    networks: 
+      - network_api
+  network_api:
+    image: network_api
+    build:
+      context: .
+    ports:
+      - 8080:8080
+    env_file:
+      - .env.docker
+    healthcheck:
+      test: [ "CMD", "curl", "-f" ,"http://localhost:8080/ready" ]
+      interval: 5s
+      timeout: 30s
+      retries: 50
+    restart: always
+    networks: 
+      - network_api
+    depends_on:
+      - postgres
+  editor:
+    image: swaggerapi/swagger-editor:v3.16.5
+    ports:
+      - 8888:8080
+    networks:
+      - network_api
+    volumes:
+      - ./api:/tmp
+    environment:
+      SWAGGER_FILE: /tmp/openapi.yaml
+volumes:
+  postgres-db-volume:
+
+networks: 
+    network_api:
